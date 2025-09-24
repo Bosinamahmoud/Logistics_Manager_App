@@ -1,49 +1,38 @@
-// home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:logistics_manager_app/core/data/enums/trip_status.dart';
-import 'package:logistics_manager_app/core/data/enums/vehicle_type.dart';
 import 'package:logistics_manager_app/core/data/model/trip_model.dart';
 import 'package:logistics_manager_app/core/styling/app_colors.dart';
 import 'package:logistics_manager_app/core/styling/app_styles.dart';
 import 'package:logistics_manager_app/features/home/widgets/custom_trip_widget.dart';
+import 'package:logistics_manager_app/features/home/data/db_helper/db_helper.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final trips = [
-      TripModel(
-        id: 1,
-        assignedDriver: 'John Doe',
-        assignedVehicle: 'Truck A',
-        pickupLocation: 'Warehouse A',
-        dropoffLocation: 'Store B',
-        status: TripStatus.inProgress,
-        vehicleType: VehicleType.truck,
-      ),
-      TripModel(
-        id: 2,
-        assignedDriver: 'Jane Smith',
-        assignedVehicle: 'Van X',
-        pickupLocation: 'Depot 1',
-        dropoffLocation: 'Customer Y',
-        status: TripStatus.pending,
-        vehicleType: VehicleType.van,
-      ),
-      TripModel(
-        id: 3,
-        assignedDriver: 'Mike Johnson',
-        assignedVehicle: 'Car Z',
-        pickupLocation: 'Branch C',
-        dropoffLocation: 'Main Office',
-        status: TripStatus.completed,
-        vehicleType: VehicleType.car,
-      ),
-    ];
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
+class _HomeScreenState extends State<HomeScreen> {
+  List<TripModel> trips = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchTrips();
+  }
+
+  Future<void> fetchTrips() async {
+    trips = await DbHelper().getTrips();
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -64,7 +53,7 @@ class HomeScreen extends StatelessWidget {
                   hintText: "Search trips, drivers, locations...",
                   prefixIcon: Icon(Icons.search),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
+                  contentPadding: EdgeInsets.symmetric(vertical: 14.h),
                 ),
                 style: TextStyle(fontSize: 14.sp, color: Colors.black),
               ),
@@ -72,22 +61,28 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ),
-
-      body: ListView.builder(
-        padding: EdgeInsets.only(bottom: 80.h),
-        itemCount: trips.length,
-        itemBuilder: (context, index) {
-          return InkWell(
-            onTap: (){
-              GoRouter.of(context).pushNamed('/detailsScreen',extra: trips[index]);
-            },
-            child: CustomTripWidget(tripModel: trips[index]));
-        },
-      ),
-
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : trips.isEmpty
+          ? const Center(child: Text("No trips found."))
+          : ListView.builder(
+              padding: EdgeInsets.only(bottom: 80.h),
+              itemCount: trips.length,
+              itemBuilder: (context, index) {
+                return InkWell(
+                  onTap: () {
+                    GoRouter.of(
+                      context,
+                    ).pushNamed('/detailsScreen', extra: trips[index]);
+                  },
+                  child: CustomTripWidget(tripModel: trips[index]),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          GoRouter.of(context).push('/tripScreen');
+        onPressed: () async {
+          await GoRouter.of(context).push('/tripScreen');
+          fetchTrips();
         },
         backgroundColor: AppColors.primaryColor,
         shape: const CircleBorder(),

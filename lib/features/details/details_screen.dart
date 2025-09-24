@@ -5,6 +5,7 @@ import 'package:logistics_manager_app/core/styling/app_colors.dart';
 import 'package:logistics_manager_app/core/styling/app_styles.dart';
 import 'package:logistics_manager_app/features/details/widgets/header_card.dart';
 import 'package:logistics_manager_app/features/details/widgets/section_card.dart';
+import 'package:logistics_manager_app/features/home/data/db_helper/db_helper.dart';
 
 class DetailsScreen extends StatefulWidget {
   final TripModel trip;
@@ -16,7 +17,31 @@ class DetailsScreen extends StatefulWidget {
 }
 
 class _DetailsScreenState extends State<DetailsScreen> {
+  late TripModel trip;
   TripStatus? selectedStatus;
+  @override
+  void initState() {
+    super.initState();
+    trip = widget.trip;
+    selectedStatus = trip.status;
+  }
+
+  Future<void> updateStatus() async {
+    if (selectedStatus != null && selectedStatus != trip.status) {
+      trip = TripModel(
+        id: trip.id,
+        assignedDriver: trip.assignedDriver,
+        assignedVehicle: trip.assignedVehicle,
+        pickupLocation: trip.pickupLocation,
+        dropoffLocation: trip.dropoffLocation,
+        status: selectedStatus!,
+        vehicleType: trip.vehicleType,
+      );
+      await DbHelper().updateTrip(trip);
+      setState(() {});
+      Navigator.pop(context, true); 
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +62,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
           children: [
             // Header
             HeaderCard(trip: widget.trip),
-
             const SizedBox(height: 16),
 
             // Driver
@@ -130,6 +154,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         ),
                       ),
                       onPressed: () {
+                        updateStatus();
+
                         if (selectedStatus != null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
